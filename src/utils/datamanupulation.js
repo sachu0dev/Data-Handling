@@ -1,43 +1,23 @@
-import fs from 'fs';
-import readline from 'readline';
+import fs from 'fs/promises';
 
 const removeKeys = async (inputFile, outputFile, keysToRemove, keyToCheck) => {
-  const readStream = fs.createReadStream(inputFile);
-  const writeStream = fs.createWriteStream(outputFile);
-  const lineReader = readline.createInterface({ input: readStream });
+  try {
+    const data = await fs.readFile(inputFile, 'utf-8');
+    const items = JSON.parse(data);
 
-  let isFirstItem = true;
-  let itemsKept = 0;
-  let itemsRemoved = 0;
+    const filteredItems = items.filter(item => {
+      const valueToCheck = item[keyToCheck];
+      return !keysToRemove.includes(valueToCheck);
+    });
 
-  writeStream.write('[');
-
-  for await (const line of lineReader) {
-    if (line === '[' || line === ']') continue;
-
-    const item = JSON.parse(line.replace(/,$/, ''));
-    const valueToCheck = item[keyToCheck];
-
-    const shouldRemoveItem = Array.isArray(valueToCheck)
-      ? valueToCheck.some(value => keysToRemove.includes(value))
-      : keysToRemove.includes(valueToCheck);
-
-    if (!shouldRemoveItem) {
-      if (!isFirstItem) writeStream.write(',');
-      writeStream.write(JSON.stringify(item));
-      isFirstItem = false;
-      itemsKept++;
-    } else {
-      itemsRemoved++;
-    }
+    await fs.writeFile(outputFile, JSON.stringify(filteredItems, null, 2));
+    
+    console.log(`Data processing complete.
+${filteredItems.length} items were kept and written to ${outputFile}.
+${items.length - filteredItems.length} items were removed.`);
+  } catch (error) {
+    console.error('Error processing data:', error);
   }
-
-  writeStream.write(']');
-  writeStream.end();
-
-  console.log(`Data processing complete.
-${itemsKept} items were kept and written to ${outputFile}.
-${itemsRemoved} items were removed.`);
 };
 
 export { removeKeys };

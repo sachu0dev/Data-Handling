@@ -1,14 +1,13 @@
-import { removeKeys } from './src/utils/datamanupulation.js';
 import { generateData } from './src/utils/datagenration.js';
+import { removeKeys } from './src/utils/datamanupulation.js';
 import { loadData, performQuery } from './src/utils/dataquery.js';
-
 
 const performAction = async () => {
   try {
     console.time('Total execution time');
 
     console.time('Data generation');
-    await generateData(100000); // 1 billion records
+    await generateData(1000000); // 1 million records
     console.timeEnd('Data generation');
 
     console.time('Key removal');
@@ -31,4 +30,4 @@ const performAction = async () => {
   }
 };
 
-performAction().then(() => console.log('All Process completed'));
+performAction().then(() => console.log('All processes completed'));

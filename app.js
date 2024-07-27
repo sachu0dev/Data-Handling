@@ -1,35 +1,34 @@
-import express from 'express'
 import { removeKeys } from './src/utils/datamanupulation.js';
 import { generateData } from './src/utils/datagenration.js';
 import { loadData, performQuery } from './src/utils/dataquery.js';
 
 
-const app = express()
-const port = 3000
+const performAction = async () => {
+  try {
+    console.time('Total execution time');
 
-app.get('/genrate', (req, res) => {
-  const numRow = req.query.q;
-  const start = performance.now();
-  generateData(numRow);
-  const end = performance.now();
-  console.log(`Time taken: ${end - start}ms`);
-  res.send(`Time taken: ${end - start}ms`)
-})
+    console.time('Data generation');
+    await generateData(100000); // 1 billion records
+    console.timeEnd('Data generation');
 
-app.get('/manupulate', (req, res) => {
-  const start = performance.now();
-  removeKeys("data.json", "data2.json", [35], "age");
-  const end = performance.now();
-  console.log(`Time taken: ${end - start}ms`);
-  res.send(`Time taken: ${end - start}ms`)
-})
+    console.time('Key removal');
+    await removeKeys("data.json", "data2.json", [35], "age");
+    console.timeEnd('Key removal');
 
-app.get('/query', (req, res) => {
-  const { key, value } = req.query;
-  loadData().then(() => performQuery(key, value));
-  res.send(`Data loaded and query executed`)
-})
+    console.time('Data loading');
+    await loadData();
+    console.timeEnd('Data loading');
 
-app.listen(port, () => {
-  console.log(`Example app listening on port ${port}`)
-})
+    console.time('Query execution');
+    const result = await performQuery("age", 18);
+    console.timeEnd('Query execution');
+
+    console.log('Query result:', result);
+
+    console.timeEnd('Total execution time');
+  } catch (error) {
+    console.error('An error occurred during execution:', error);
+  }
+};
+
+performAction().then(() => console.log('All Process completed'));

@@ -1,55 +1,43 @@
 import fs from 'fs';
-import JSONStream from 'JSONStream';
+import readline from 'readline';
 
-const removeKeys = (inputFile, outputFile, keysToRemove, keyToCheck) => {
+const removeKeys = async (inputFile, outputFile, keysToRemove, keyToCheck) => {
   const readStream = fs.createReadStream(inputFile);
   const writeStream = fs.createWriteStream(outputFile);
-  const parser = JSONStream.parse('*');
-  
+  const lineReader = readline.createInterface({ input: readStream });
+
+  let isFirstItem = true;
+  let itemsKept = 0;
+  let itemsRemoved = 0;
+
   writeStream.write('[');
-  
-  let isFirst = true;
-  let count = 0;
-  let removedCount = 0;  
-  
-  parser.on('data', (item) => {
+
+  for await (const line of lineReader) {
+    if (line === '[' || line === ']') continue;
+
+    const item = JSON.parse(line.replace(/,$/, ''));
     const valueToCheck = item[keyToCheck];
-    
-    let shouldRemove = false;
 
-    if (typeof valueToCheck === 'string') {
-      const values = valueToCheck.split(' ');
+    const shouldRemoveItem = Array.isArray(valueToCheck)
+      ? valueToCheck.some(value => keysToRemove.includes(value))
+      : keysToRemove.includes(valueToCheck);
 
-      shouldRemove = keysToRemove.some(keyToRemove => {
-        if (keyToRemove.includes(' ')) {
-          return keyToRemove === valueToCheck; 
-        } else {
-          return values.includes(keyToRemove); 
-        }
-      });
-    } else if (keysToRemove.includes(valueToCheck)) {
-      shouldRemove = true; 
-    }
-
-    if (!shouldRemove) {
-      if (!isFirst) {
-        writeStream.write(',');
-      }
+    if (!shouldRemoveItem) {
+      if (!isFirstItem) writeStream.write(',');
       writeStream.write(JSON.stringify(item));
-      isFirst = false;
-      count++;
+      isFirstItem = false;
+      itemsKept++;
     } else {
-      removedCount++;
+      itemsRemoved++;
     }
-  });
-  
-  parser.on('end', () => {
-    writeStream.write(']');
-    writeStream.end();
-    console.log(`Data manipulation complete. ${count} rows written to ${outputFile}. ${removedCount} rows removed.`);
-  });
-  
-  readStream.pipe(parser);
+  }
+
+  writeStream.write(']');
+  writeStream.end();
+
+  console.log(`Data processing complete.
+${itemsKept} items were kept and written to ${outputFile}.
+${itemsRemoved} items were removed.`);
 };
 
 export { removeKeys };

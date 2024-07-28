@@ -12,7 +12,6 @@ const removeKeys = async (inputFile, outputFile, keysToRemove, keyToCheck) => {
     let itemsRemoved = 0;
     let isFirstItem = true;
 
-    // Write the opening bracket
     writeStream.write('[\n');
 
     const filterStream = new Transform({
@@ -20,7 +19,6 @@ const removeKeys = async (inputFile, outputFile, keysToRemove, keyToCheck) => {
       transform(item, encoding, callback) {
         const valueToCheck = item[keyToCheck];
         if (!keysToRemove.includes(valueToCheck)) {
-          // Add comma for all items except the first
           if (!isFirstItem) {
             this.push(',\n');
           } else {
@@ -34,7 +32,6 @@ const removeKeys = async (inputFile, outputFile, keysToRemove, keyToCheck) => {
         callback();
       },
       flush(callback) {
-        // Write the closing bracket
         this.push('\n]');
         callback();
       }

@@ -1,7 +1,7 @@
 import fs from 'fs';
 import { connectDB } from './features.js';
 import { Person } from '../model/model.js';
-import JSONStream from 'JSONStream'; // Ensure to install this
+import JSONStream from 'JSONStream'; 
 const url = 'mongodb://localhost:27017/bigDataDB';
 
 async function loadData() {
@@ -9,7 +9,7 @@ async function loadData() {
   try {
     db = await connectDB(url);
     const fileStream = fs.createReadStream('data2.json');
-    const jsonStream = JSONStream.parse('*'); // Parsing the whole file
+    const jsonStream = JSONStream.parse('*'); 
 
     const start = performance.now();
 
@@ -82,3 +82,4 @@ async function performQuery(key, value) {
 }
 
 export { loadData, performQuery };
+// Ensure to install this

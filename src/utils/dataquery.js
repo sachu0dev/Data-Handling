@@ -14,23 +14,32 @@ async function loadData() {
     const start = performance.now();
 
     let batch = [];
-    const batchSize = 10000; 
+    const batchSize = 10000;
 
     fileStream.pipe(jsonStream);
 
     jsonStream.on('data', async (doc) => {
       batch.push(doc);
       if (batch.length >= batchSize) {
-        jsonStream.pause(); // Pause the stream while processing the batch
-        await Person.insertMany(batch, { ordered: false });
-        batch = [];
-        jsonStream.resume(); // Resume the stream
+        jsonStream.pause();
+        try {
+          await Person.insertMany(batch, { ordered: false });
+        } catch (err) {
+          console.error('Error inserting batch:', err);
+        } finally {
+          batch = [];
+          jsonStream.resume();
+        }
       }
     });
 
     jsonStream.on('end', async () => {
       if (batch.length > 0) {
-        await Person.insertMany(batch, { ordered: false });
+        try {
+          await Person.insertMany(batch, { ordered: false });
+        } catch (err) {
+          console.error('Error inserting final batch:', err);
+        }
       }
       const end = performance.now();
       console.log(`Data loading time: ${end - start} ms`);
@@ -43,7 +52,7 @@ async function loadData() {
     fileStream.on('error', (error) => {
       console.error('Error reading file:', error);
     });
-    
+
   } catch (error) {
     console.error('Error loading data:', error);
   } finally {

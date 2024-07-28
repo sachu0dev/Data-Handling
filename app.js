@@ -7,7 +7,7 @@ const performAction = async () => {
     console.time('Total execution time');
 
     console.time('Data generation');
-    await generateData(1000000); // 1 million records
+    await generateData(1000); // 1 Billion records
     console.timeEnd('Data generation');
 
     console.time('Key removal');

@@ -1,23 +1,61 @@
-import fs from 'fs/promises';
+import fs from 'fs';
+import JSONStream from 'JSONStream';
+import { Transform } from 'stream';
 
 const removeKeys = async (inputFile, outputFile, keysToRemove, keyToCheck) => {
-  try {
-    const data = await fs.readFile(inputFile, 'utf-8');
-    const items = JSON.parse(data);
+  return new Promise((resolve, reject) => {
+    const readStream = fs.createReadStream(inputFile, { encoding: 'utf8' });
+    const writeStream = fs.createWriteStream(outputFile);
+    const parser = JSONStream.parse('*');
+    
+    let itemsKept = 0;
+    let itemsRemoved = 0;
+    let isFirstItem = true;
 
-    const filteredItems = items.filter(item => {
-      const valueToCheck = item[keyToCheck];
-      return !keysToRemove.includes(valueToCheck);
+    // Write the opening bracket
+    writeStream.write('[\n');
+
+    const filterStream = new Transform({
+      objectMode: true,
+      transform(item, encoding, callback) {
+        const valueToCheck = item[keyToCheck];
+        if (!keysToRemove.includes(valueToCheck)) {
+          // Add comma for all items except the first
+          if (!isFirstItem) {
+            this.push(',\n');
+          } else {
+            isFirstItem = false;
+          }
+          this.push(JSON.stringify(item, null, 2));
+          itemsKept++;
+        } else {
+          itemsRemoved++;
+        }
+        callback();
+      },
+      flush(callback) {
+        // Write the closing bracket
+        this.push('\n]');
+        callback();
+      }
     });
 
-    await fs.writeFile(outputFile, JSON.stringify(filteredItems, null, 2));
-    
-    console.log(`Data processing complete.
-${filteredItems.length} items were kept and written to ${outputFile}.
-${items.length - filteredItems.length} items were removed.`);
-  } catch (error) {
-    console.error('Error processing data:', error);
-  }
+    readStream
+      .pipe(parser)
+      .pipe(filterStream)
+      .pipe(writeStream);
+
+    writeStream.on('finish', () => {
+      console.log(`Data processing complete.
+        ${itemsKept} items were kept and written to ${outputFile}.
+        ${itemsRemoved} items were removed.`);
+      resolve();
+    });
+
+    readStream.on('error', reject);
+    writeStream.on('error', reject);
+    parser.on('error', reject);
+  });
 };
 
 export { removeKeys };
